@@ -370,7 +370,10 @@ async def handle_text(message: Message):
         async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):
             reply = await generate_reply(session, user_id, message.text)
 
-        sent = await message.answer(reply)
+        try:
+            sent = await message.answer(reply, parse_mode=None)
+        except Exception:
+            sent = await message.answer("🤖 Ответ получен, но содержит символы, которые Telegram не может отобразить.", parse_mode=None)
 
         # Списываем запрос и трекаем ответ
         await consume_request(session, user)

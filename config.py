@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     max_tracked_messages: int = 50
 
     # Реферальная система
-    referral_bonus: int = 3  # Бонус запросов за приглашённого друга
+    referral_bonus: int = 1  # Бонус запросов за приглашённого друга
 
     # Админы (через запятую: ADMIN_IDS=123456789,987654321)
     admin_ids: str = ""
