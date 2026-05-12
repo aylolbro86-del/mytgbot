@@ -48,19 +48,22 @@ async def generate_reply(session: AsyncSession, tg_id: int, text: str) -> str:
     # Запрос к AI
     async with _ai_semaphore:
         try:
+            logger.warning("AI request: user=%d, persona=%s, msgs=%d", tg_id, user.persona, len(messages))
             response = await client.chat.completions.create(
                 model=config.ai_model,
                 messages=messages,
                 temperature=config.ai_temperature,
                 max_tokens=config.ai_max_tokens,
             )
+            logger.warning("AI response: user=%d, content_len=%d", tg_id, len(response.choices[0].message.content or ""))
         except openai.APITimeoutError:
             await session.commit()
             return "⏳ ИИ думает слишком долго. Попробуй ещё раз."
         except openai.RateLimitError:
             await session.commit()
             return "🚫 Слишком много запросов. Подожди немного."
-        except openai.APIError:
+        except openai.APIError as e:
+            logger.warning("APIError for user %d: %s", tg_id, e)
             await session.commit()
             return "❌ Ошибка сервиса ИИ. Попробуй позже."
         except Exception:
