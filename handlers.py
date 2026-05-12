@@ -297,7 +297,12 @@ async def handle_text(message: Message):
         async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):
             reply = await generate_reply(session, user_id, message.text)
 
-        sent = await message.answer(reply)
+        # Отправляем без parse_mode — AI может вернуть <, > и другие спецсимволы
+        try:
+            sent = await message.answer(reply, parse_mode=None)
+        except Exception:
+            # Если всё равно ошибка — отправим как есть
+            sent = await message.answer("🤖 Ответ содержит спецсимволы, которые не удалось отобразить.")
 
         # Списываем запрос и трекаем ответ
         await consume_request(session, user)
