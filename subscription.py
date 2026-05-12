@@ -54,6 +54,10 @@ def _reset_daily_if_needed(user: User) -> None:
         user.daily_date = today
 
 
+# Бесплатные персоны (с дневным лимитом)
+FREE_PERSONAS = {"jarvis", "rude", "cute"}
+
+
 async def check_can_send(session: AsyncSession, user: User) -> tuple[bool, str]:
     """
     Проверяет, может ли пользователь отправить запрос.
@@ -62,22 +66,21 @@ async def check_can_send(session: AsyncSession, user: User) -> tuple[bool, str]:
     if has_paid_access(user):
         return True, ""
 
-    if user.persona != "jarvis":
+    if user.persona not in FREE_PERSONAS:
         return False, (
             "🔒 Эта персона доступна только с подпиской.\n\n"
             "Купи пакет запросов, чтобы общаться\n"
             "с премиум-персонами 👇"
         )
 
-    # Jarvis — дневной лимит
+    # Бесплатные персоны — дневной лимит
     _reset_daily_if_needed(user)
 
     if user.daily_used < config.free_daily_limit:
         return True, ""
 
     return False, (
-        f"⚠️ Ты использовал все {config.free_daily_limit} бесплатных сообщений\n"
-        f"с Jarvis на сегодня.\n\n"
+        f"⚠️ Ты использовал все {config.free_daily_limit} бесплатных сообщений на сегодня.\n\n"
         "Купи пакет запросов, чтобы продолжить 👇"
     )
 
@@ -92,7 +95,7 @@ async def consume_request(session: AsyncSession, user: User):
         await session.commit()
         return
 
-    if user.persona == "jarvis":
+    if user.persona in FREE_PERSONAS:
         user.daily_used += 1
         await session.commit()
 

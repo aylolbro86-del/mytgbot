@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from prompts import PERSONAS
-from subscription import PLANS
+from subscription import PLANS, FREE_PERSONAS
 
 
 def get_main_menu() -> InlineKeyboardMarkup:
@@ -18,7 +18,7 @@ def get_personas_keyboard(current_persona: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for key, data in PERSONAS.items():
         marker = "● " if key == current_persona else "○ "
-        label = "🆓" if key == "jarvis" else "💎"
+        label = "🆓" if key in FREE_PERSONAS else "💎"
         builder.button(
             text=f"{marker}{label} {data['name']}",
             callback_data=f"set_persona_{key}",

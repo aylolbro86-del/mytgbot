@@ -194,7 +194,8 @@ async def cb_set_persona(callback: CallbackQuery):
         user = await get_or_create_user(session, callback.from_user.id)
 
         # Платные персоны — только с подпиской
-        if persona_key != "jarvis" and not has_paid_access(user):
+        from subscription import FREE_PERSONAS
+        if persona_key not in FREE_PERSONAS and not has_paid_access(user):
             text = (
                 f"🔒 <b>Нужна подписка</b>\n\n"
                 f"Персона <b>{PERSONAS[persona_key]['name']}</b>\n"
@@ -297,12 +298,7 @@ async def handle_text(message: Message):
         async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):
             reply = await generate_reply(session, user_id, message.text)
 
-        # Отправляем без parse_mode — AI может вернуть <, > и другие спецсимволы
-        try:
-            sent = await message.answer(reply, parse_mode=None)
-        except Exception:
-            # Если всё равно ошибка — отправим как есть
-            sent = await message.answer("🤖 Ответ содержит спецсимволы, которые не удалось отобразить.")
+        sent = await message.answer(reply)
 
         # Списываем запрос и трекаем ответ
         await consume_request(session, user)
