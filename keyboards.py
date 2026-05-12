@@ -9,8 +9,9 @@ def get_main_menu() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="🎭 Личности", callback_data="change_persona")
     builder.button(text="💎 Подписка", callback_data="subscription")
+    builder.button(text="👥 Пригласить друга", callback_data="referral")
     builder.button(text="🧹 Очистить чат", callback_data="clear_memory")
-    builder.adjust(2, 1)
+    builder.adjust(2, 2)
     return builder.as_markup()
 
 

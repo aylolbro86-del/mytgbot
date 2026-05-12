@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from aiogram.utils.chat_action import ChatActionSender
 from sqlalchemy import select, delete, func
 
-from database import AsyncSessionLocal, get_or_create_user, ChatMessage
+from database import AsyncSessionLocal, get_or_create_user, ChatMessage, User
 from keyboards import get_main_menu, get_personas_keyboard, get_subscription_keyboard
 from ai_service import generate_reply, clear_user_memory
 from subscription import (
@@ -76,6 +76,22 @@ async def _track_message(session, chat_id: int, message_id: int, user_id: int):
 async def cmd_start(message: Message):
     async with AsyncSessionLocal() as session:
         user = await get_or_create_user(session, message.from_user.id)
+
+        # Обработка реферальной ссылки: /start ref_123456789
+        if message.text and message.text.startswith("/start ref_"):
+            try:
+                referrer_id = int(message.text.split("ref_")[1])
+                # Засчитываем только если: новый юзер, не сам себя, ещё не был приглашён
+                if referrer_id != message.from_user.id and user.referred_by is None:
+                    user.referred_by = referrer_id
+                    # Бонус пригласившему
+                    referrer = await session.get(User, referrer_id)
+                    if referrer:
+                        referrer.paid_requests += config.referral_bonus
+                        referrer.referral_count += 1
+            except (ValueError, IndexError):
+                pass
+
         await _track_message(session, message.chat.id, message.message_id, message.from_user.id)
         await session.commit()
 
@@ -94,6 +110,62 @@ async def cmd_start(message: Message):
         f"<i>Напиши мне или выбери действие:</i>"
     )
     await message.answer(text, reply_markup=get_main_menu())
+
+
+@router.message(Command("ref"))
+async def cmd_referral(message: Message):
+    """Показать реферальную ссылку и статистику."""
+    user_id = message.from_user.id
+    bot_info = await message.bot.get_me()
+    ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
+
+    async with AsyncSessionLocal() as session:
+        user = await get_or_create_user(session, user_id)
+        count = user.referral_count
+        earned = count * config.referral_bonus
+
+    text = (
+        f"┌─────────────────────────┐\n"
+        f"   👥 <b>Реферальная программа</b>\n"
+        f"└─────────────────────────┘\n\n"
+        f"Приглашай друзей и получай\n"
+        f"<b>+{config.referral_bonus} запросов</b> за каждого!\n\n"
+        f"📊 Приглашено: <b>{count}</b>\n"
+        f"🎁 Заработано: <b>{earned}</b> запросов\n\n"
+        f"🔗 Твоя ссылка:\n"
+        f"<code>{ref_link}</code>\n\n"
+        f"<i>Нажми на ссылку чтобы скопировать</i>"
+    )
+    await message.answer(text)
+
+
+# ─── Реферальная система (callback) ─────────────────────────────────────────
+
+@router.callback_query(F.data == "referral")
+async def cb_referral(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    bot_info = await callback.bot.get_me()
+    ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
+
+    async with AsyncSessionLocal() as session:
+        user = await get_or_create_user(session, user_id)
+        count = user.referral_count
+        earned = count * config.referral_bonus
+
+    text = (
+        f"┌─────────────────────────┐\n"
+        f"   👥 <b>Пригласи друга</b>\n"
+        f"└─────────────────────────┘\n\n"
+        f"За каждого друга ты получишь\n"
+        f"<b>+{config.referral_bonus} запросов</b> бесплатно!\n\n"
+        f"📊 Приглашено: <b>{count}</b>\n"
+        f"🎁 Заработано: <b>{earned}</b> запросов\n\n"
+        f"🔗 Твоя ссылка:\n"
+        f"<code>{ref_link}</code>\n\n"
+        f"<i>Нажми чтобы скопировать и отправь другу</i>"
+    )
+    await callback.message.edit_text(text, reply_markup=get_main_menu())
+    await callback.answer()
 
 
 # ─── Подписка ───────────────────────────────────────────────────────────────

@@ -33,6 +33,10 @@ class User(Base):
     daily_used = Column(Integer, default=0)
     daily_date = Column(Date, default=date.today)
 
+    # Реферальная система
+    referred_by = Column(BigInteger, nullable=True)  # Кто пригласил
+    referral_count = Column(Integer, default=0)  # Сколько пригласил
+
     history = relationship(
         "MessageHistory", back_populates="user",
         cascade="all, delete-orphan", lazy="noload",

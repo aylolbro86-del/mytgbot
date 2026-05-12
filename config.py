@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     rate_limit_seconds: int = 3
     max_tracked_messages: int = 50
 
+    # Реферальная система
+    referral_bonus: int = 3  # Бонус запросов за приглашённого друга
+
     # Админы (через запятую: ADMIN_IDS=123456789,987654321)
     admin_ids: str = ""
 
